@@ -11,11 +11,11 @@ setupErrorHandler();
  * Optional - Syslog server endpoint URL
  *
  * URL must include:
- * - Protocol (udp)
+ * - Protocol (udp/tcp)
  * - Host (IP or hostname)
  * - Port (default: 514)
  *
- * Format: udp://host:port
+ * Format: protocol://host:port
  * Example: udp://127.0.0.1:514
  *
  * If not provided, will be prompted during script execution.
@@ -112,6 +112,7 @@ $fritzBoxPassword = getConfigOrPromptSecure('FRITZ!Box Password: ', FRITZBOX_PAS
 $fritzBoxSessionId = null;
 $lastLogsTimestamp = time();
 $lastRefreshTime = 0;
+
 
 /************************************************************************
  * MAIN LOOP                                                            *
@@ -246,8 +247,8 @@ function authenticateWithFritzBox(
             if (++$retriesCounter > MAX_RETRIES_ALLOWED) {
                 throw new Exception(
                     message: sprintf(
-                    'Too many login attempt have failed (%d)',
-                    $retriesCounter
+                        'Too many login attempt have failed (%d)',
+                        $retriesCounter
                     ),
                     previous: $e
                 );
@@ -313,8 +314,8 @@ function fetchEventLogs(
             if (++$retriesCounter > MAX_RETRIES_ALLOWED) {
                 throw new Exception(
                     message: sprintf(
-                    'Too many unexpected failures while fetching eventlogs (%d)',
-                    $retriesCounter
+                        'Too many unexpected failures while fetching eventlogs (%d)',
+                        $retriesCounter
                     ),
                     previous: $e
                 );
@@ -372,8 +373,8 @@ function syncLogsToSyslog(
             if (++$retriesCounter > MAX_RETRIES_ALLOWED) {
                 throw new Exception(
                     message: sprintf(
-                    'Too many unexpected failures while sending logs to syslog server (%d)',
-                    $retriesCounter
+                        'Too many unexpected failures while sending logs to syslog server (%d)',
+                        $retriesCounter
                     ),
                     previous: $e
                 );
@@ -418,11 +419,10 @@ function stdOut(
 }
 
 /**
- * Outputs an error message to standard error with timestamp and error level
+ * Outputs an error message to standard error
  *
- * Triggers an error with the specified level and message. The message is
- * prefixed with a timestamp and error level indicator in the format:
- * 'Y-m-d H:i:s.v [LEVEL] message'
+ * Triggers an error with the specified level and message.
+ * The message is in the following format: '[LEVEL] message'
  *
  * @param string $message The error message to output
  * @param int $level The error level (E_USER_NOTICE, E_USER_WARNING, E_USER_ERROR)
@@ -599,9 +599,9 @@ function makeLoginRequest(
     if ($fritzLoginGetResponse['status'] !== 200) {
         throw new Exception(
             message: sprintf(
-            'Request is failed! HTTP (Code: %s) GET %s',
-            (string) $fritzLoginGetResponse['status'],
-            $endpoint
+                'Request is failed! HTTP (Code: %s) GET %s',
+                (string) $fritzLoginGetResponse['status'],
+                $endpoint
             ),
             code: (int) $fritzLoginGetResponse['status']
         );
@@ -640,9 +640,9 @@ function makeLoginRequest(
     if ($fritzLoginPostResponse['status'] !== 200) {
         throw new Exception(
             message: sprintf(
-            'Request is failed! HTTP (Code: %s) POST %s',
-            (string) $fritzLoginPostResponse['status'],
-            $formActionEndpoint
+                'Request is failed! HTTP (Code: %s) POST %s',
+                (string) $fritzLoginPostResponse['status'],
+                $formActionEndpoint
             ),
             code: (int) $fritzLoginPostResponse['status']
         );
