@@ -23,7 +23,7 @@ PHP was chosen simply because it's a language I'm comfortable with. While there 
 
 ## Requirements
 
-- PHP 8.0 or higher
+- PHP 8.2 or higher
 - CURL extension
 - Access to a FRITZ!Box device
   - Tested with FRITZ!Box 7530
