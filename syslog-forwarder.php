@@ -244,10 +244,13 @@ function authenticateWithFritzBox(
             }
 
             if (++$retriesCounter > MAX_RETRIES_ALLOWED) {
-                throw new Exception(sprintf(
+                throw new Exception(
+                    message: sprintf(
                     'Too many login attempt have failed (%d)',
                     $retriesCounter
-                ));
+                    ),
+                    previous: $e
+                );
             }
 
             $secondsToWait = $retriesCounter * 5;
@@ -308,10 +311,13 @@ function fetchEventLogs(
             }
 
             if (++$retriesCounter > MAX_RETRIES_ALLOWED) {
-                throw new Exception(sprintf(
+                throw new Exception(
+                    message: sprintf(
                     'Too many unexpected failures while fetching eventlogs (%d)',
                     $retriesCounter
-                ));
+                    ),
+                    previous: $e
+                );
             }
 
             $secondsToWait = $retriesCounter * 5;
@@ -364,10 +370,13 @@ function syncLogsToSyslog(
             stdErr('Unexpected error when sync logs to syslog server: '. $e->getMessage());
 
             if (++$retriesCounter > MAX_RETRIES_ALLOWED) {
-                throw new Exception(sprintf(
+                throw new Exception(
+                    message: sprintf(
                     'Too many unexpected failures while sending logs to syslog server (%d)',
                     $retriesCounter
-                ));
+                    ),
+                    previous: $e
+                );
             }
 
             $secondsToWait = $retriesCounter * 5;
@@ -588,11 +597,14 @@ function makeLoginRequest(
     );
 
     if ($fritzLoginGetResponse['status'] !== 200) {
-        throw new Exception(sprintf(
+        throw new Exception(
+            message: sprintf(
             'Request is failed! HTTP (Code: %s) GET %s',
             (string) $fritzLoginGetResponse['status'],
             $endpoint
-        ));
+            ),
+            code: (int) $fritzLoginGetResponse['status']
+        );
     }
 
     if (
@@ -626,11 +638,14 @@ function makeLoginRequest(
     );
 
     if ($fritzLoginPostResponse['status'] !== 200) {
-        throw new Exception(sprintf(
+        throw new Exception(
+            message: sprintf(
             'Request is failed! HTTP (Code: %s) POST %s',
             (string) $fritzLoginPostResponse['status'],
             $formActionEndpoint
-        ));
+            ),
+            code: (int) $fritzLoginPostResponse['status']
+        );
     }
 
     if (
@@ -704,7 +719,7 @@ function makeEventLogsRequest(
                 (string) $response['status'],
                 $responseErrorMessage
             ),
-            code: $response['status']
+            code: (int) $response['status']
         );
     }
 
@@ -715,7 +730,7 @@ function makeEventLogsRequest(
                 (string) $response['status'],
                 $eventLogsEndpoint
             ),
-            code: $response['status']
+            code: (int) $response['status']
         );
     }
 
@@ -847,8 +862,8 @@ function sendLogsToSyslog(
 
         // Send the log message to the syslog server
         if (fwrite($syslogConnection, $syslogMessage) === false) {
-            throw new Exception("Syslog server error: Unable to push log entries to the remote syslog server");
             $syslogConnection = null;
+            throw new Exception("Syslog server error: Unable to push log entries to the remote syslog server");
         }
     }
 }
