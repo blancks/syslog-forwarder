@@ -210,6 +210,7 @@ exit(1);
  * @param string $username The administrator username
  * @param string $password The administrator password
  *
+ * @throws Exception With code 400 when invalid credentials are provided
  * @throws Exception When authentication fails after maximum retries
  * @return string The session ID for authenticated requests
  */
@@ -224,7 +225,7 @@ function authenticateWithFritzBox(
     while (true) {
         try {
 
-            stdOut('Attempt to login to FRITZ!Box...', '');
+            stdOut(message: 'Attempt to login to FRITZ!Box...', eol: '');
 
             $sessionId = makeLoginRequest(
                 $endpoint,
