@@ -808,6 +808,7 @@ function sendLogsToSyslog(
 
         stdOut('Connection to syslog server established.');
 
+        // TODO: decouple syslog connection and signal handler logic
         $syslogCloseConnectionFunction = function() use($syslogConnection) {
             fclose($syslogConnection);
             stdOut('Connection to syslog server closed.');
