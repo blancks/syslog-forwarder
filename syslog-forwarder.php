@@ -529,10 +529,8 @@ function getConfigOrPromptSecure(
  * @return string The password entered by user
  * @see https://www.sitepoint.com/interactive-cli-password-prompt-in-php/
  */
-function readlineSecure(
-    #[SensitiveParameter]
-    string $prompt
-): string {
+function readlineSecure(string $prompt): string
+{
     // the following code works fine on W11 somehow
     if (preg_match('/^win/i', PHP_OS)) {
         $vbscript = sys_get_temp_dir() . 'prompt_password.vbs';
