@@ -796,7 +796,6 @@ function sendLogsToSyslog(
             error_message: $errstr,
             timeout: 30
         );
-        stdOut('Connection to syslog server established.');
 
         if ($syslogConnection === false) {
             $syslogConnection = null;
@@ -807,6 +806,8 @@ function sendLogsToSyslog(
                 $errstr
             ));
         }
+
+        stdOut('Connection to syslog server established.');
 
         $syslogCloseConnectionFunction = function() use($syslogConnection) {
             fclose($syslogConnection);
