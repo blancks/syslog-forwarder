@@ -857,7 +857,7 @@ function sendLogsToSyslog(
             (string)$priority,
             (string)$timestamp,
             (string)($hostname === false? 'unknown-host' : $hostname),
-            "FRITZ!Box - (id:{$logsEntry['id']}; group:{$logsEntry['group']}) {$logsEntry['msg']}"
+            $message
         );
 
         // Send the log message to the syslog server
