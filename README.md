@@ -26,8 +26,8 @@ PHP was chosen simply because it's a language I'm comfortable with. While there 
 - PHP 8.2 or higher
 - CURL extension
 - Access to a FRITZ!Box device
-  - Tested with FRITZ!Box 7530
-  - Tested with FRITZ!OS v.8.02
+  - Tested with FRITZ!Box 7530, 7590
+  - Tested with FRITZ!OS v.8.02, v.8.03
 - A syslog server (like rsyslog, syslog-ng)
 
 Note: This is a command-line script - no web server is required.
