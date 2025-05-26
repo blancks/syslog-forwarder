@@ -103,6 +103,20 @@ sudo systemctl start syslog-forwarder
 sudo systemctl status syslog-forwarder
 ```
 
+### Running as container
+
+Build the container:
+```
+docker build -t avm-syslog-forwarder .
+```
+
+Edit the settings in `env` file.
+
+Run the container using docker:
+```
+docker run -d --env-file env avm-syslog-forwarder
+```
+
 ## Syslog Message Format
 
 Messages are sent in RFC 3164 format:
