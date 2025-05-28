@@ -26,8 +26,8 @@ PHP was chosen simply because it's a language I'm comfortable with. While there 
 - PHP 8.2 or higher
 - CURL extension
 - Access to a FRITZ!Box device
-  - Tested with FRITZ!Box 7530
-  - Tested with FRITZ!OS v.8.02
+  - Tested with FRITZ!Box 7530, 7590
+  - Tested with FRITZ!OS v.8.02, v.8.03
 - A syslog server (like rsyslog, syslog-ng)
 
 Note: This is a command-line script - no web server is required.
@@ -43,16 +43,7 @@ Note: This is a command-line script - no web server is required.
 
 ## Configuration
 
-Edit the script and set these constants at the top of the file:
-
-```php
-const SYSLOG_SERVER = 'udp://127.0.0.1:514';        // Syslog server endpoint
-const SYSLOG_MESSAGE_IDENTIFIER = 'FRITZ!Box';       // Log message prefix
-const FRITZBOX_ENDPOINT = 'http://192.168.1.1';     // FRITZ!Box URL
-const FRITZBOX_USERNAME = 'admin';                   // FRITZ!Box username
-const FRITZBOX_PASSWORD = '';                        // FRITZ!Box password
-```
-
+Copy the `.env.example` file to `.env` and edit the variables according to your needs.
 If configuration values are not set, the script will prompt for them at runtime.
 
 ## Usage
@@ -84,6 +75,7 @@ After=network.target
 [Service]
 Type=simple
 User=YOUR_USERNAME
+EnvironmentFile=/path/to/your/.env
 ExecStart=/usr/bin/php /path/to/syslog-forwarder.php
 Restart=always
 RestartSec=3
@@ -101,6 +93,18 @@ sudo systemctl start syslog-forwarder
 3. Check status with:
 ```bash
 sudo systemctl status syslog-forwarder
+```
+
+### Running as container
+
+Build the container:
+```
+docker build -t syslog-forwarder .
+```
+
+Run the container using docker:
+```
+docker run -d --env-file .env syslog-forwarder
 ```
 
 ## Syslog Message Format

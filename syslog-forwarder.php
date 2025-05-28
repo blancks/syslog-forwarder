@@ -20,7 +20,7 @@ setupErrorHandler();
  *
  * If not provided, will be prompted during script execution.
  */
-const SYSLOG_SERVER = '';
+define('SYSLOG_SERVER', getenv('SYSLOG_SERVER'));
 
 /**
  * Optional - Message identifier prefix for syslog entries.
@@ -31,7 +31,7 @@ const SYSLOG_SERVER = '';
  * Format: string
  * Example: 'FRITZ!Box'
  */
-const SYSLOG_MESSAGE_IDENTIFIER = 'FRITZ!Box';
+define('SYSLOG_MESSAGE_IDENTIFIER', getenv('SYSLOG_MESSAGE_IDENTIFIER'));
 
 /**
  * Optional - FRITZ!Box URL endpoint
@@ -44,7 +44,7 @@ const SYSLOG_MESSAGE_IDENTIFIER = 'FRITZ!Box';
  *
  * If not provided, will be prompted during script execution.
  */
-const FRITZBOX_ENDPOINT = '';
+define('FRITZBOX_ENDPOINT', getenv('FRITZBOX_ENDPOINT'));
 
 /**
  * Optional - FRITZ!Box administrator username
@@ -56,7 +56,7 @@ const FRITZBOX_ENDPOINT = '';
  *
  * If not provided, will be prompted during script execution.
  */
-const FRITZBOX_USERNAME = '';
+define('FRITZBOX_USERNAME', getenv('FRITZBOX_USERNAME'));
 
 /**
  * Optional - FRITZ!Box administrator password
@@ -69,7 +69,7 @@ const FRITZBOX_USERNAME = '';
  *
  * If not provided, will be prompted securely during script execution.
  */
-const FRITZBOX_PASSWORD = '';
+define('FRITZBOX_PASSWORD', getenv('FRITZBOX_PASSWORD'));
 
 /**
  * Required - Refresh interval in seconds
@@ -81,7 +81,7 @@ const FRITZBOX_PASSWORD = '';
  * Example: 5 (checks every 5 seconds)
  * Recommended range: 1-60 seconds
  */
-const REFRESH_INTERVAL_SECONDS = 5;
+define('REFRESH_INTERVAL_SECONDS', getenv('REFRESH_INTERVAL_SECONDS'));
 
 /**
  * Required - Maximum number of retry attempts
@@ -93,7 +93,7 @@ const REFRESH_INTERVAL_SECONDS = 5;
  * Example: 3 (will try 4 times total - initial attempt plus 3 retries)
  * Minimum value: 0
  */
-const MAX_RETRIES_ALLOWED = 3;
+define('MAX_RETRIES_ALLOWED', getenv('MAX_RETRIES_ALLOWED'));
 
 
 /************************************************************************
