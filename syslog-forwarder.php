@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+
 declare(strict_types=1);
 setupErrorHandler();
 
@@ -178,7 +179,7 @@ while (true) {
         // keep only newer entries
         $eventLogs = array_filter(
             $eventLogs,
-            fn($entry) => $entry['timestamp'] > $lastLogsTimestamp
+            fn ($entry) => $entry['timestamp'] > $lastLogsTimestamp
         );
 
     } catch (Throwable $e) {
@@ -319,7 +320,7 @@ function fetchEventLogs(
 ): array {
     $retriesCounter = 0;
 
-    while(true) {
+    while (true) {
         try {
 
             return makeEventLogsRequest(
@@ -382,7 +383,7 @@ function syncLogsToSyslog(
 ): int {
     $retriesCounter = 0;
 
-    while(true) {
+    while (true) {
         try {
 
             sendLogsToSyslog($serverEndpoint, $eventLogs);
@@ -428,7 +429,7 @@ function syncLogsToSyslog(
 function env(string $name): string
 {
     $env = getenv($name);
-    return is_string($env)? $env : '';
+    return is_string($env) ? $env : '';
 }
 
 /**
@@ -448,7 +449,7 @@ function stdOut(
     ?string $prefix = null
 ): void {
     if ($prefix === null) {
-        $prefix = (new DateTime)->format('Y-m-d H:i:s.v');
+        $prefix = (new DateTime())->format('Y-m-d H:i:s.v');
     }
 
     echo $prefix, ' ', $message, $eol;
@@ -499,7 +500,7 @@ function stdErr(
  */
 function setupErrorHandler(): void
 {
-    set_error_handler(function(int $errno, string $errstr, string $errfile, int $errline): bool {
+    set_error_handler(function (int $errno, string $errstr, string $errfile, int $errline): bool {
         if (!(error_reporting() & $errno)) {
             return false;
         }
@@ -783,7 +784,7 @@ function makeEventLogsRequest(
     }
 
     $eventLogs = array_map(
-        fn($entry) => [
+        fn ($entry) => [
             'timestamp' => DateTime::createFromFormat('d.m.y H:i:s', $entry['date'].' '.$entry['time'])->getTimestamp(),
             'date' => $entry['date'],
             'time' => $entry['time'],
@@ -795,7 +796,7 @@ function makeEventLogsRequest(
         $eventLogs
     );
 
-    uasort($eventLogs, fn($a, $b) => $a['timestamp'] <=> $b['timestamp']);
+    uasort($eventLogs, fn ($a, $b) => $a['timestamp'] <=> $b['timestamp']);
 
     return $eventLogs;
 }
@@ -844,7 +845,7 @@ function sendLogsToSyslog(
         stdOut('Connection to syslog server established.');
 
         // TODO: decouple syslog connection and signal handler logic
-        $syslogCloseConnectionFunction = function() use($syslogConnection) {
+        $syslogCloseConnectionFunction = function () use ($syslogConnection) {
             fclose($syslogConnection);
             stdOut('Connection to syslog server closed.');
             exit(0);
@@ -853,7 +854,7 @@ function sendLogsToSyslog(
         // if we can handle signalts, attempt to gracefully close the syslog server connection
         if (preg_match('/^win/i', PHP_OS)) {
 
-            sapi_windows_set_ctrl_handler(fn(int $event) => match($event) {
+            sapi_windows_set_ctrl_handler(fn (int $event) => match($event) {
                 PHP_WINDOWS_EVENT_CTRL_C => $syslogCloseConnectionFunction(),
                 PHP_WINDOWS_EVENT_CTRL_BREAK => $syslogCloseConnectionFunction()
             });
@@ -892,7 +893,7 @@ function sendLogsToSyslog(
             '<%s>%s %s %s',
             (string)$priority,
             (string)$timestamp,
-            (string)($hostname === false? 'unknown-host' : $hostname),
+            (string)($hostname === false ? 'unknown-host' : $hostname),
             $message
         );
 
@@ -1031,7 +1032,8 @@ function generateLoginPasswordHash(
  *   iterations2: int
  * } Parsed challenge components with binary salts and integer iterations
  */
-function parseChallengeString(string $challenge): array {
+function parseChallengeString(string $challenge): array
+{
     $parts = explode('$', trim($challenge), 5);
 
     if (count($parts) < 5) {
