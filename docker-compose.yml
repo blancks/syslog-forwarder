@@ -1,0 +1,7 @@
+services:
+  syslog-forwarder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
