@@ -3,6 +3,8 @@
 
 declare(strict_types=1);
 setupErrorHandler();
+loadEnvVariables();
+
 
 /************************************************************************
  * CONFIGURATION OPTIONS                                                *
@@ -611,6 +613,76 @@ function readlineSecure(string $prompt): string
     stdOut(message: '', eol: PHP_EOL, prefix: '');
 
     return $password;
+}
+
+/**
+ * Loads environment variables from a .env file into the application environment
+ *
+ * Checks if environment variables are already defined before loading from file.
+ * If SYSLOG_SERVER is already set in the environment, this function returns early
+ * without loading the file.
+ *
+ * @param string $filename Path to the .env file, defaults to '.env'
+ * @return void
+ * @see parseEnvFile() For the function that parses the .env file
+ */
+function loadEnvVariables(string $filename = '.env'): void
+{
+    if (getenv('SYSLOG_SERVER') !== false) {
+        return;
+    }
+
+    foreach (parseEnvFile($filename) as $key => $value) {
+        putenv("{$key}={$value}");
+    }
+}
+
+/**
+ * Parses a .env file and yields environment variables as key-value pairs
+ *
+ * @param string $path Path to the .env file to parse
+ * @return \Generator<string, string> A generator yielding variable names as keys and their values
+ */
+function parseEnvFile(string $path): \Generator
+{
+    if (!is_readable($path)) {
+        return;
+    }
+
+    $fileHandler = fopen($path, 'rb');
+
+    if ($fileHandler === false) {
+        return;
+    }
+
+    try {
+
+        while ($line = fgets($fileHandler)) {
+            if (
+                empty($line)
+                || str_starts_with($line, '#')
+                || !str_contains($line, '=')
+            ) {
+                continue;
+            }
+
+            [$key, $value] = explode('=', $line, 2);
+            $key = trim($key);
+            $value = trim($value);
+
+            // Remove quotes
+            if (preg_match('/^([\'"])((?:\\\\.|(?!\1).)*)\1$/', $value, $matches) === 1) {
+                $value = $matches[2];
+            }
+
+            yield $key => $value;
+        }
+
+    } finally {
+
+        fclose($fileHandler);
+
+    }
 }
 
 
