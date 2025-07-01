@@ -1,7 +1,10 @@
 #!/usr/bin/env php
 <?php
+
 declare(strict_types=1);
 setupErrorHandler();
+loadEnvVariables();
+setupTimezone(env('SYSLOG_TIMEZONE'));
 
 /************************************************************************
  * CONFIGURATION OPTIONS                                                *
@@ -20,7 +23,7 @@ setupErrorHandler();
  *
  * If not provided, will be prompted during script execution.
  */
-define('SYSLOG_SERVER', getenv('SYSLOG_SERVER'));
+define('SYSLOG_SERVER', env('SYSLOG_SERVER'));
 
 /**
  * Optional - Message identifier prefix for syslog entries.
@@ -31,7 +34,7 @@ define('SYSLOG_SERVER', getenv('SYSLOG_SERVER'));
  * Format: string
  * Example: 'FRITZ!Box'
  */
-define('SYSLOG_MESSAGE_IDENTIFIER', getenv('SYSLOG_MESSAGE_IDENTIFIER'));
+define('SYSLOG_MESSAGE_IDENTIFIER', env('SYSLOG_MESSAGE_IDENTIFIER'));
 
 /**
  * Optional - FRITZ!Box URL endpoint
@@ -44,7 +47,7 @@ define('SYSLOG_MESSAGE_IDENTIFIER', getenv('SYSLOG_MESSAGE_IDENTIFIER'));
  *
  * If not provided, will be prompted during script execution.
  */
-define('FRITZBOX_ENDPOINT', getenv('FRITZBOX_ENDPOINT'));
+define('FRITZBOX_ENDPOINT', env('FRITZBOX_ENDPOINT'));
 
 /**
  * Optional - FRITZ!Box administrator username
@@ -56,7 +59,7 @@ define('FRITZBOX_ENDPOINT', getenv('FRITZBOX_ENDPOINT'));
  *
  * If not provided, will be prompted during script execution.
  */
-define('FRITZBOX_USERNAME', getenv('FRITZBOX_USERNAME'));
+define('FRITZBOX_USERNAME', env('FRITZBOX_USERNAME'));
 
 /**
  * Optional - FRITZ!Box administrator password
@@ -69,7 +72,7 @@ define('FRITZBOX_USERNAME', getenv('FRITZBOX_USERNAME'));
  *
  * If not provided, will be prompted securely during script execution.
  */
-define('FRITZBOX_PASSWORD', getenv('FRITZBOX_PASSWORD'));
+define('FRITZBOX_PASSWORD', env('FRITZBOX_PASSWORD'));
 
 /**
  * Required - Refresh interval in seconds
@@ -81,7 +84,7 @@ define('FRITZBOX_PASSWORD', getenv('FRITZBOX_PASSWORD'));
  * Example: 5 (checks every 5 seconds)
  * Recommended range: 1-60 seconds
  */
-define('REFRESH_INTERVAL_SECONDS', getenv('REFRESH_INTERVAL_SECONDS'));
+define('REFRESH_INTERVAL_SECONDS', (int)env('REFRESH_INTERVAL_SECONDS', '5'));
 
 /**
  * Required - Maximum number of retry attempts
@@ -93,7 +96,7 @@ define('REFRESH_INTERVAL_SECONDS', getenv('REFRESH_INTERVAL_SECONDS'));
  * Example: 3 (will try 4 times total - initial attempt plus 3 retries)
  * Minimum value: 0
  */
-define('MAX_RETRIES_ALLOWED', getenv('MAX_RETRIES_ALLOWED'));
+define('MAX_RETRIES_ALLOWED', (int)env('MAX_RETRIES_ALLOWED', '3'));
 
 
 /************************************************************************
@@ -155,7 +158,7 @@ while (true) {
         // keep only newer entries
         $eventLogs = array_filter(
             $eventLogs,
-            fn($entry) => $entry['timestamp'] > $lastLogsTimestamp
+            fn ($entry) => $entry['timestamp'] > $lastLogsTimestamp
         );
 
     } catch (Throwable $e) {
@@ -220,51 +223,44 @@ function authenticateWithFritzBox(
     #[SensitiveParameter]
     string $password
 ): string {
-    $retriesCounter = 0;
+    try {
 
-    while (true) {
-        try {
+        return retryableAction(function () use ($endpoint, $username, $password) {
+            try {
 
-            stdOut(message: 'Attempt to login to FRITZ!Box...', eol: '');
+                stdOut(message: 'Attempt to login to FRITZ!Box...', eol: '');
 
-            $sessionId = makeLoginRequest(
-                $endpoint,
-                $username,
-                $password
-            );
-
-            stdOut(message: ' Success!', prefix: '');
-
-            return $sessionId;
-
-        } catch (Throwable $e) {
-
-            stdOut(message: ' Fail!', prefix: '');
-
-            if ($e->getCode() === 400) {
-                throw $e;
-            }
-
-            if (++$retriesCounter > MAX_RETRIES_ALLOWED) {
-                throw new Exception(
-                    message: sprintf(
-                        'Too many login attempt have failed (%d)',
-                        $retriesCounter
-                    ),
-                    previous: $e
+                $sessionId = makeLoginRequest(
+                    $endpoint,
+                    $username,
+                    $password
                 );
+
+                stdOut(message: ' Success!', prefix: '');
+                return $sessionId;
+
+            } catch (Throwable $e) {
+
+                stdOut(message: ' Fail!', prefix: '');
+
+                // invalid credentials
+                if ($e->getCode() === 400) {
+                    throw new NonRetryableException($e->getMessage(), $e->getCode(), $e);
+                }
+
+                throw $e;
+
             }
+        });
 
-            $secondsToWait = $retriesCounter * 5;
+    } catch (RuntimeException $e) {
 
-            stdOut(sprintf('Waiting for %d seconds before retry.', $secondsToWait));
-            sleep($secondsToWait);
-            continue;
+        throw new Exception(
+            message: 'Too many login attempt have failed',
+            previous: $e
+        );
 
-        }
     }
-
-    throw new Exception('Unknown error');
 }
 
 /**
@@ -294,41 +290,35 @@ function fetchEventLogs(
     #[SensitiveParameter]
     string $sessionId
 ): array {
-    $retriesCounter = 0;
+    try {
 
-    while(true) {
-        try {
+        return retryableAction(function () use ($endpoint, $sessionId) {
+            try {
 
-            return makeEventLogsRequest(
-                $endpoint,
-                $sessionId
-            );
-
-        } catch (Throwable $e) {
-
-            stdErr('Unable to fetch syslogs: '. $e->getMessage());
-
-            if ($e->getCode() === 400) {
-                throw $e;
-            }
-
-            if (++$retriesCounter > MAX_RETRIES_ALLOWED) {
-                throw new Exception(
-                    message: sprintf(
-                        'Too many unexpected failures while fetching eventlogs (%d)',
-                        $retriesCounter
-                    ),
-                    previous: $e
+                return makeEventLogsRequest(
+                    $endpoint,
+                    $sessionId
                 );
+
+            } catch (Throwable $e) {
+
+                // invalid credentials
+                if ($e->getCode() === 400) {
+                    throw new NonRetryableException($e->getMessage(), $e->getCode(), $e);
+                }
+
+                throw $e;
+
             }
+        });
 
-            $secondsToWait = $retriesCounter * 5;
+    } catch (RuntimeException $e) {
 
-            stdOut(sprintf('Waiting for %d seconds before retry.', $secondsToWait));
-            sleep($secondsToWait);
-            continue;
+        throw new Exception(
+            message: 'Too many unexpected failures while fetching eventlogs',
+            previous: $e
+        );
 
-        }
     }
 }
 
@@ -357,31 +347,57 @@ function syncLogsToSyslog(
     string $serverEndpoint,
     array $eventLogs
 ): int {
+    try {
+
+        return retryableAction(function () use ($serverEndpoint, $eventLogs) {
+            sendLogsToSyslog($serverEndpoint, $eventLogs);
+            return end($eventLogs)['timestamp'];
+        });
+
+    } catch (RuntimeException $e) {
+
+        throw new Exception(
+            message: 'Too many unexpected failures while sending logs to syslog server',
+            previous: $e
+        );
+
+    }
+}
+
+/**
+ * Executes an action with automatic retry functionality
+ *
+ * Attempts to execute the provided callback function and automatically retries
+ * on failure up to MAX_RETRIES_ALLOWED times with exponential backoff.
+ *
+ * @param Closure $callback The function to execute. If a NonRetryableException is thrown, the retry is skipped
+ * @param int $backoffBaseSeconds Base time in seconds for calculating exponential backoff (default: 5)
+ *
+ * @throws RuntimeException When the maximum retry attempts are exceeded
+ * @return mixed The return value of the callback function
+ */
+function retryableAction(Closure $callback, int $backoffBaseSeconds = 5): mixed
+{
     $retriesCounter = 0;
 
-    while(true) {
+    while (true) {
         try {
 
-            sendLogsToSyslog($serverEndpoint, $eventLogs);
-
-            // return last entry timestamp
-            return end($eventLogs)['timestamp'];
+            return $callback();
 
         } catch (Throwable $e) {
 
-            stdErr('Unexpected error when sync logs to syslog server: '. $e->getMessage());
-
-            if (++$retriesCounter > MAX_RETRIES_ALLOWED) {
-                throw new Exception(
-                    message: sprintf(
-                        'Too many unexpected failures while sending logs to syslog server (%d)',
-                        $retriesCounter
-                    ),
-                    previous: $e
-                );
+            if ($e instanceof NonRetryableException) {
+                throw $e->getPrevious();
             }
 
-            $secondsToWait = $retriesCounter * 5;
+            stdErr($e->getMessage());
+
+            if (++$retriesCounter > MAX_RETRIES_ALLOWED) {
+                throw new RuntimeException('Failed too many times.');
+            }
+
+            $secondsToWait = $retriesCounter * $backoffBaseSeconds;
 
             stdOut(sprintf('Waiting for %d seconds before retry.', $secondsToWait));
             sleep($secondsToWait);
@@ -395,6 +411,27 @@ function syncLogsToSyslog(
 /************************************************************************
  * Input/Output                                                         *
  ************************************************************************/
+
+/**
+ * Exceptions of this type skips the retry mechanism if thrown
+ * inside of a callback function passed to retryableAction
+ */
+class NonRetryableException extends Exception
+{
+}
+
+/**
+ * Gets the value of an environment variable.
+ *
+ * @param string $name The name of the environment variable to retrieve
+ * @param string $default The default value to return if the environment variable is not set
+ * @return string The value of the environment variable
+ */
+function env(string $name, string $default = ''): string
+{
+    $env = getenv($name);
+    return is_string($env) ? $env : $default;
+}
 
 /**
  * Outputs a message to standard output with timestamp
@@ -412,11 +449,27 @@ function stdOut(
     string $eol = PHP_EOL,
     ?string $prefix = null
 ): void {
+    fwrite(STDOUT, outputFormat($message, $eol, $prefix));
+}
+
+/**
+ * Formats a message with timestamp prefix and returns it as string
+ *
+ * @param string $message The message to format
+ * @param string $eol End of line character(s), defaults to PHP_EOL
+ * @param string|null $prefix Optional custom prefix, defaults to timestamp
+ * @return string The formatted message string with prefix
+ */
+function outputFormat(
+    string $message,
+    string $eol = PHP_EOL,
+    ?string $prefix = null
+): string {
     if ($prefix === null) {
-        $prefix = (new DateTime)->format('Y-m-d H:i:s.v');
+        $prefix = (new DateTime())->format('Y-m-d H:i:s.v');
     }
 
-    echo $prefix, ' ', $message, $eol;
+    return $prefix . ' ' . $message . $eol;
 }
 
 /**
@@ -464,12 +517,12 @@ function stdErr(
  */
 function setupErrorHandler(): void
 {
-    set_error_handler(function(int $errno, string $errstr, string $errfile, int $errline): bool {
+    set_error_handler(function (int $errno, string $errstr, string $errfile, int $errline): bool {
         if (!(error_reporting() & $errno)) {
             return false;
         }
 
-        stdOut($errstr);
+        fwrite(STDERR, outputFormat($errstr));
         return true;
     });
 }
@@ -558,6 +611,115 @@ function readlineSecure(string $prompt): string
     stdOut(message: '', eol: PHP_EOL, prefix: '');
 
     return $password;
+}
+
+/**
+ * Loads environment variables from a .env file into the application environment
+ *
+ * Checks if environment variables are already defined before loading from file.
+ * If SYSLOG_SERVER is already set in the environment, this function returns early
+ * without loading the file.
+ *
+ * @param string $filename Path to the .env file, defaults to '.env'
+ * @return void
+ * @see parseEnvFile() For the function that parses the .env file
+ */
+function loadEnvVariables(string $filename = '.env'): void
+{
+    if (getenv('SYSLOG_SERVER') !== false) {
+        return;
+    }
+
+    foreach (parseEnvFile($filename) as $key => $value) {
+        putenv("{$key}={$value}");
+    }
+}
+
+/**
+ * Parses a .env file and yields environment variables as key-value pairs
+ *
+ * @param string $path Path to the .env file to parse
+ * @return Generator<string, string> A generator yielding variable names as keys and their values
+ */
+function parseEnvFile(string $path): Generator
+{
+    if (!is_readable($path)) {
+        return;
+    }
+
+    $fileHandler = fopen($path, 'rb');
+
+    if ($fileHandler === false) {
+        return;
+    }
+
+    try {
+
+        while ($line = fgets($fileHandler)) {
+            if (
+                empty($line)
+                || str_starts_with($line, '#')
+                || !str_contains($line, '=')
+            ) {
+                continue;
+            }
+
+            [$key, $value] = explode('=', $line, 2);
+            $key = trim($key);
+            $value = trim($value);
+
+            // Remove quotes
+            if (preg_match('/^([\'"])((?:\\\\.|(?!\1).)*)\1$/', $value, $matches) === 1) {
+                $value = $matches[2];
+            }
+
+            yield $key => $value;
+        }
+
+    } finally {
+
+        fclose($fileHandler);
+
+    }
+}
+
+/**
+ * Configures the application timezone
+ *
+ * Sets the timezone for the application based on the provided value.
+ * If the timezone is invalid, falls back to the default PHP timezone.
+ *
+ * @param string $timezone The timezone to set, or empty string to use default
+ * @return string The timezone that was actually set
+ */
+function setupTimezone(string $timezone = ''): string
+{
+    $defaultTimezone = date_default_timezone_get();
+
+    if ($timezone === '') {
+        stdOut(sprintf('Using default timezone: %s', $defaultTimezone));
+        return $defaultTimezone;
+    }
+
+    if (@date_default_timezone_set($timezone)) {
+
+        stdOut(sprintf('Timezone set to: %s', $timezone));
+        return $timezone;
+
+    } else {
+
+        stdErr(
+            sprintf(
+                'Invalid timezone value "%s". Falling back to default: %s',
+                $timezone,
+                $defaultTimezone
+            )
+        );
+
+        date_default_timezone_set($defaultTimezone);
+        return $defaultTimezone;
+
+    }
 }
 
 
@@ -748,7 +910,7 @@ function makeEventLogsRequest(
     }
 
     $eventLogs = array_map(
-        fn($entry) => [
+        fn ($entry) => [
             'timestamp' => DateTime::createFromFormat('d.m.y H:i:s', $entry['date'].' '.$entry['time'])->getTimestamp(),
             'date' => $entry['date'],
             'time' => $entry['time'],
@@ -760,7 +922,7 @@ function makeEventLogsRequest(
         $eventLogs
     );
 
-    uasort($eventLogs, fn($a, $b) => $a['timestamp'] <=> $b['timestamp']);
+    uasort($eventLogs, fn ($a, $b) => $a['timestamp'] <=> $b['timestamp']);
 
     return $eventLogs;
 }
@@ -809,7 +971,7 @@ function sendLogsToSyslog(
         stdOut('Connection to syslog server established.');
 
         // TODO: decouple syslog connection and signal handler logic
-        $syslogCloseConnectionFunction = function() use($syslogConnection) {
+        $syslogCloseConnectionFunction = function () use ($syslogConnection) {
             fclose($syslogConnection);
             stdOut('Connection to syslog server closed.');
             exit(0);
@@ -818,7 +980,7 @@ function sendLogsToSyslog(
         // if we can handle signalts, attempt to gracefully close the syslog server connection
         if (preg_match('/^win/i', PHP_OS)) {
 
-            sapi_windows_set_ctrl_handler(fn(int $event) => match($event) {
+            sapi_windows_set_ctrl_handler(fn (int $event) => match($event) {
                 PHP_WINDOWS_EVENT_CTRL_C => $syslogCloseConnectionFunction(),
                 PHP_WINDOWS_EVENT_CTRL_BREAK => $syslogCloseConnectionFunction()
             });
@@ -857,7 +1019,7 @@ function sendLogsToSyslog(
             '<%s>%s %s %s',
             (string)$priority,
             (string)$timestamp,
-            (string)($hostname === false? 'unknown-host' : $hostname),
+            (string)($hostname === false ? 'unknown-host' : $hostname),
             $message
         );
 
@@ -996,7 +1158,8 @@ function generateLoginPasswordHash(
  *   iterations2: int
  * } Parsed challenge components with binary salts and integer iterations
  */
-function parseChallengeString(string $challenge): array {
+function parseChallengeString(string $challenge): array
+{
     $parts = explode('$', trim($challenge), 5);
 
     if (count($parts) < 5) {

@@ -1,6 +1,5 @@
 FROM php:8.2-alpine3.21
 
-COPY php.ini /usr/local/etc/php
 COPY syslog-forwarder.php /opt
 
 WORKDIR /opt
