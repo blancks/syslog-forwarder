@@ -100,6 +100,29 @@ define('MAX_RETRIES_ALLOWED', env('MAX_RETRIES_ALLOWED'));
  * PROGRAM START                                                        *
  ************************************************************************/
 
+// Set default timezone
+
+$timezone = env('SYSLOG_TIMEZONE');
+$defaultTimezone = date_default_timezone_get();
+
+if ($timezone !== '') {
+    if (@date_default_timezone_set($timezone) === false) {
+        stdErr(
+            sprintf(
+                'Invalid Timezone value "%s". The script will default to: %s',
+                $timezone,
+                $defaultTimezone
+            )
+        );
+
+        date_default_timezone_set($defaultTimezone);
+        $timezone = $defaultTimezone;
+    }
+}
+
+stdOut(sprintf('Timezone: %s', $timezone));
+
+
 // Collect input data
 
 $syslogServerEndpoint = getConfigOrPromptValue('Syslog Server (ex: udp://127.0.0.1:514): ', SYSLOG_SERVER);
