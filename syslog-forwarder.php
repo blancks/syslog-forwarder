@@ -4,7 +4,7 @@
 declare(strict_types=1);
 setupErrorHandler();
 loadEnvVariables();
-
+setupTimezone(env('SYSLOG_TIMEZONE'));
 
 /************************************************************************
  * CONFIGURATION OPTIONS                                                *
@@ -102,29 +102,6 @@ define('MAX_RETRIES_ALLOWED', (int)env('MAX_RETRIES_ALLOWED', '3'));
 /************************************************************************
  * PROGRAM START                                                        *
  ************************************************************************/
-
-// Set default timezone
-
-$timezone = env('SYSLOG_TIMEZONE');
-$defaultTimezone = date_default_timezone_get();
-
-if ($timezone !== '') {
-    if (@date_default_timezone_set($timezone) === false) {
-        stdErr(
-            sprintf(
-                'Invalid Timezone value "%s". The script will default to: %s',
-                $timezone,
-                $defaultTimezone
-            )
-        );
-
-        date_default_timezone_set($defaultTimezone);
-        $timezone = $defaultTimezone;
-    }
-}
-
-stdOut(sprintf('Timezone: %s', $timezone));
-
 
 // Collect input data
 
@@ -681,6 +658,45 @@ function parseEnvFile(string $path): \Generator
     } finally {
 
         fclose($fileHandler);
+
+    }
+}
+
+/**
+ * Configures the application timezone
+ *
+ * Sets the timezone for the application based on the provided value.
+ * If the timezone is invalid, falls back to the default PHP timezone.
+ *
+ * @param string $timezone The timezone to set, or empty string to use default
+ * @return string The timezone that was actually set
+ */
+function setupTimezone(string $timezone = ''): string
+{
+    $defaultTimezone = date_default_timezone_get();
+
+    if ($timezone === '') {
+        stdOut(sprintf('Using default timezone: %s', $defaultTimezone));
+        return $defaultTimezone;
+    }
+
+    if (@date_default_timezone_set($timezone)) {
+
+        stdOut(sprintf('Timezone set to: %s', $timezone));
+        return $timezone;
+
+    } else {
+
+        stdErr(
+            sprintf(
+                'Invalid timezone value "%s". Falling back to default: %s',
+                $timezone,
+                $defaultTimezone
+            )
+        );
+
+        date_default_timezone_set($defaultTimezone);
+        return $defaultTimezone;
 
     }
 }
