@@ -20,7 +20,7 @@ setupErrorHandler();
  *
  * If not provided, will be prompted during script execution.
  */
-define('SYSLOG_SERVER', getenv('SYSLOG_SERVER'));
+define('SYSLOG_SERVER', env('SYSLOG_SERVER'));
 
 /**
  * Optional - Message identifier prefix for syslog entries.
@@ -31,7 +31,7 @@ define('SYSLOG_SERVER', getenv('SYSLOG_SERVER'));
  * Format: string
  * Example: 'FRITZ!Box'
  */
-define('SYSLOG_MESSAGE_IDENTIFIER', getenv('SYSLOG_MESSAGE_IDENTIFIER'));
+define('SYSLOG_MESSAGE_IDENTIFIER', env('SYSLOG_MESSAGE_IDENTIFIER'));
 
 /**
  * Optional - FRITZ!Box URL endpoint
@@ -44,7 +44,7 @@ define('SYSLOG_MESSAGE_IDENTIFIER', getenv('SYSLOG_MESSAGE_IDENTIFIER'));
  *
  * If not provided, will be prompted during script execution.
  */
-define('FRITZBOX_ENDPOINT', getenv('FRITZBOX_ENDPOINT'));
+define('FRITZBOX_ENDPOINT', env('FRITZBOX_ENDPOINT'));
 
 /**
  * Optional - FRITZ!Box administrator username
@@ -56,7 +56,7 @@ define('FRITZBOX_ENDPOINT', getenv('FRITZBOX_ENDPOINT'));
  *
  * If not provided, will be prompted during script execution.
  */
-define('FRITZBOX_USERNAME', getenv('FRITZBOX_USERNAME'));
+define('FRITZBOX_USERNAME', env('FRITZBOX_USERNAME'));
 
 /**
  * Optional - FRITZ!Box administrator password
@@ -69,7 +69,7 @@ define('FRITZBOX_USERNAME', getenv('FRITZBOX_USERNAME'));
  *
  * If not provided, will be prompted securely during script execution.
  */
-define('FRITZBOX_PASSWORD', getenv('FRITZBOX_PASSWORD'));
+define('FRITZBOX_PASSWORD', env('FRITZBOX_PASSWORD'));
 
 /**
  * Required - Refresh interval in seconds
@@ -81,7 +81,7 @@ define('FRITZBOX_PASSWORD', getenv('FRITZBOX_PASSWORD'));
  * Example: 5 (checks every 5 seconds)
  * Recommended range: 1-60 seconds
  */
-define('REFRESH_INTERVAL_SECONDS', getenv('REFRESH_INTERVAL_SECONDS'));
+define('REFRESH_INTERVAL_SECONDS', env('REFRESH_INTERVAL_SECONDS'));
 
 /**
  * Required - Maximum number of retry attempts
@@ -93,7 +93,7 @@ define('REFRESH_INTERVAL_SECONDS', getenv('REFRESH_INTERVAL_SECONDS'));
  * Example: 3 (will try 4 times total - initial attempt plus 3 retries)
  * Minimum value: 0
  */
-define('MAX_RETRIES_ALLOWED', getenv('MAX_RETRIES_ALLOWED'));
+define('MAX_RETRIES_ALLOWED', env('MAX_RETRIES_ALLOWED'));
 
 
 /************************************************************************
@@ -395,6 +395,18 @@ function syncLogsToSyslog(
 /************************************************************************
  * Input/Output                                                         *
  ************************************************************************/
+
+/**
+ * Retrieves an environment variable value.
+ *
+ * @param string $name The name of the environment variable to retrieve
+ * @return string The value of the environment variable as a string, or an empty string if not found
+ */
+function env(string $name): string
+{
+    $env = getenv($name);
+    return is_string($env)? $env : '';
+}
 
 /**
  * Outputs a message to standard output with timestamp
