@@ -82,7 +82,7 @@ define('FRITZBOX_PASSWORD', env('FRITZBOX_PASSWORD'));
  * Example: 5 (checks every 5 seconds)
  * Recommended range: 1-60 seconds
  */
-define('REFRESH_INTERVAL_SECONDS', env('REFRESH_INTERVAL_SECONDS'));
+define('REFRESH_INTERVAL_SECONDS', (int)env('REFRESH_INTERVAL_SECONDS', '5'));
 
 /**
  * Required - Maximum number of retry attempts
@@ -94,7 +94,7 @@ define('REFRESH_INTERVAL_SECONDS', env('REFRESH_INTERVAL_SECONDS'));
  * Example: 3 (will try 4 times total - initial attempt plus 3 retries)
  * Minimum value: 0
  */
-define('MAX_RETRIES_ALLOWED', env('MAX_RETRIES_ALLOWED'));
+define('MAX_RETRIES_ALLOWED', (int)env('MAX_RETRIES_ALLOWED', '3'));
 
 
 /************************************************************************
@@ -421,15 +421,16 @@ function syncLogsToSyslog(
  ************************************************************************/
 
 /**
- * Retrieves an environment variable value.
+ * Gets the value of an environment variable.
  *
  * @param string $name The name of the environment variable to retrieve
- * @return string The value of the environment variable as a string, or an empty string if not found
+ * @param string $default The default value to return if the environment variable is not set
+ * @return string The value of the environment variable
  */
-function env(string $name): string
+function env(string $name, string $default = ''): string
 {
     $env = getenv($name);
-    return is_string($env) ? $env : '';
+    return is_string($env) ? $env : $default;
 }
 
 /**
