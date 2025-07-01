@@ -223,51 +223,44 @@ function authenticateWithFritzBox(
     #[SensitiveParameter]
     string $password
 ): string {
-    $retriesCounter = 0;
+    try {
 
-    while (true) {
-        try {
+        return retryableAction(function () use ($endpoint, $username, $password) {
+            try {
 
-            stdOut(message: 'Attempt to login to FRITZ!Box...', eol: '');
+                stdOut(message: 'Attempt to login to FRITZ!Box...', eol: '');
 
-            $sessionId = makeLoginRequest(
-                $endpoint,
-                $username,
-                $password
-            );
-
-            stdOut(message: ' Success!', prefix: '');
-
-            return $sessionId;
-
-        } catch (Throwable $e) {
-
-            stdOut(message: ' Fail!', prefix: '');
-
-            if ($e->getCode() === 400) {
-                throw $e;
-            }
-
-            if (++$retriesCounter > MAX_RETRIES_ALLOWED) {
-                throw new Exception(
-                    message: sprintf(
-                        'Too many login attempt have failed (%d)',
-                        $retriesCounter
-                    ),
-                    previous: $e
+                $sessionId = makeLoginRequest(
+                    $endpoint,
+                    $username,
+                    $password
                 );
+
+                stdOut(message: ' Success!', prefix: '');
+                return $sessionId;
+
+            } catch (Throwable $e) {
+
+                stdOut(message: ' Fail!', prefix: '');
+
+                // invalid credentials
+                if ($e->getCode() === 400) {
+                    throw new NonRetryableException($e->getMessage(), $e->getCode(), $e);
+                }
+
+                throw $e;
+
             }
+        });
 
-            $secondsToWait = $retriesCounter * 5;
+    } catch (RuntimeException $e) {
 
-            stdOut(sprintf('Waiting for %d seconds before retry.', $secondsToWait));
-            sleep($secondsToWait);
-            continue;
+        throw new Exception(
+            message: 'Too many login attempt have failed',
+            previous: $e
+        );
 
-        }
     }
-
-    throw new Exception('Unknown error');
 }
 
 /**
@@ -297,41 +290,35 @@ function fetchEventLogs(
     #[SensitiveParameter]
     string $sessionId
 ): array {
-    $retriesCounter = 0;
+    try {
 
-    while (true) {
-        try {
+        return retryableAction(function () use ($endpoint, $sessionId) {
+            try {
 
-            return makeEventLogsRequest(
-                $endpoint,
-                $sessionId
-            );
-
-        } catch (Throwable $e) {
-
-            stdErr('Unable to fetch syslogs: '. $e->getMessage());
-
-            if ($e->getCode() === 400) {
-                throw $e;
-            }
-
-            if (++$retriesCounter > MAX_RETRIES_ALLOWED) {
-                throw new Exception(
-                    message: sprintf(
-                        'Too many unexpected failures while fetching eventlogs (%d)',
-                        $retriesCounter
-                    ),
-                    previous: $e
+                return makeEventLogsRequest(
+                    $endpoint,
+                    $sessionId
                 );
+
+            } catch (Throwable $e) {
+
+                // invalid credentials
+                if ($e->getCode() === 400) {
+                    throw new NonRetryableException($e->getMessage(), $e->getCode(), $e);
+                }
+
+                throw $e;
+
             }
+        });
 
-            $secondsToWait = $retriesCounter * 5;
+    } catch (RuntimeException $e) {
 
-            stdOut(sprintf('Waiting for %d seconds before retry.', $secondsToWait));
-            sleep($secondsToWait);
-            continue;
+        throw new Exception(
+            message: 'Too many unexpected failures while fetching eventlogs',
+            previous: $e
+        );
 
-        }
     }
 }
 
@@ -360,31 +347,57 @@ function syncLogsToSyslog(
     string $serverEndpoint,
     array $eventLogs
 ): int {
+    try {
+
+        return retryableAction(function () use ($serverEndpoint, $eventLogs) {
+            sendLogsToSyslog($serverEndpoint, $eventLogs);
+            return end($eventLogs)['timestamp'];
+        });
+
+    } catch (RuntimeException $e) {
+
+        throw new Exception(
+            message: 'Too many unexpected failures while sending logs to syslog server',
+            previous: $e
+        );
+
+    }
+}
+
+/**
+ * Executes an action with automatic retry functionality
+ *
+ * Attempts to execute the provided callback function and automatically retries
+ * on failure up to MAX_RETRIES_ALLOWED times with exponential backoff.
+ *
+ * @param Closure $callback The function to execute. If a NonRetryableException is thrown, the retry is skipped
+ * @param int $backoffBaseSeconds Base time in seconds for calculating exponential backoff (default: 5)
+ *
+ * @throws RuntimeException When the maximum retry attempts are exceeded
+ * @return mixed The return value of the callback function
+ */
+function retryableAction(Closure $callback, int $backoffBaseSeconds = 5): mixed
+{
     $retriesCounter = 0;
 
     while (true) {
         try {
 
-            sendLogsToSyslog($serverEndpoint, $eventLogs);
-
-            // return last entry timestamp
-            return end($eventLogs)['timestamp'];
+            return $callback();
 
         } catch (Throwable $e) {
 
-            stdErr('Unexpected error when sync logs to syslog server: '. $e->getMessage());
-
-            if (++$retriesCounter > MAX_RETRIES_ALLOWED) {
-                throw new Exception(
-                    message: sprintf(
-                        'Too many unexpected failures while sending logs to syslog server (%d)',
-                        $retriesCounter
-                    ),
-                    previous: $e
-                );
+            if ($e instanceof NonRetryableException) {
+                throw $e->getPrevious();
             }
 
-            $secondsToWait = $retriesCounter * 5;
+            stdErr($e->getMessage());
+
+            if (++$retriesCounter > MAX_RETRIES_ALLOWED) {
+                throw new RuntimeException('Failed too many times.');
+            }
+
+            $secondsToWait = $retriesCounter * $backoffBaseSeconds;
 
             stdOut(sprintf('Waiting for %d seconds before retry.', $secondsToWait));
             sleep($secondsToWait);
@@ -398,6 +411,14 @@ function syncLogsToSyslog(
 /************************************************************************
  * Input/Output                                                         *
  ************************************************************************/
+
+/**
+ * Exceptions of this type skips the retry mechanism if thrown
+ * inside of a callback function passed to retryableAction
+ */
+class NonRetryableException extends Exception
+{
+}
 
 /**
  * Gets the value of an environment variable.
@@ -618,9 +639,9 @@ function loadEnvVariables(string $filename = '.env'): void
  * Parses a .env file and yields environment variables as key-value pairs
  *
  * @param string $path Path to the .env file to parse
- * @return \Generator<string, string> A generator yielding variable names as keys and their values
+ * @return Generator<string, string> A generator yielding variable names as keys and their values
  */
-function parseEnvFile(string $path): \Generator
+function parseEnvFile(string $path): Generator
 {
     if (!is_readable($path)) {
         return;
