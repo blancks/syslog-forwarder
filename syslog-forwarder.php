@@ -449,11 +449,27 @@ function stdOut(
     string $eol = PHP_EOL,
     ?string $prefix = null
 ): void {
+    fwrite(STDOUT, outputFormat($message, $eol, $prefix));
+}
+
+/**
+ * Formats a message with timestamp prefix and returns it as string
+ *
+ * @param string $message The message to format
+ * @param string $eol End of line character(s), defaults to PHP_EOL
+ * @param string|null $prefix Optional custom prefix, defaults to timestamp
+ * @return string The formatted message string with prefix
+ */
+function outputFormat(
+    string $message,
+    string $eol = PHP_EOL,
+    ?string $prefix = null
+): string {
     if ($prefix === null) {
         $prefix = (new DateTime())->format('Y-m-d H:i:s.v');
     }
 
-    echo $prefix, ' ', $message, $eol;
+    return $prefix . ' ' . $message . $eol;
 }
 
 /**
@@ -506,7 +522,7 @@ function setupErrorHandler(): void
             return false;
         }
 
-        stdOut($errstr);
+        fwrite(STDERR, outputFormat($errstr));
         return true;
     });
 }
