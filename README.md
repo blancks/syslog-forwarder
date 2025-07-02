@@ -2,25 +2,6 @@
 
 A PHP script that forwards FRITZ!Box system logs to a syslog server.
 
-## Background
-
-This project was created to address the lack of native syslog forwarding capabilities in FRITZ!Box routers. It allows centralizing router event logs to a syslog server for better log management and monitoring.
-
-This tool started as a personal utility and was developed in just a few hours. It's being shared for others who might need a simple solution to the same problem.
-
-### Why PHP?
-
-PHP was chosen simply because it's a language I'm comfortable with. While there might be better technical choices for this task, PHP is simple enough to get the job done. The performance impact of using PHP with polling is negligible - even with 1-second refresh intervals, the resource usage remains minimal.
-
-## Features
-
-- Real-time log forwarding from FRITZ!Box to syslog server
-- Supports RFC 3164 syslog format
-- Configurable refresh interval and retry mechanism
-- Secure authentication with FRITZ!Box web interface
-- Support for both legacy MD5 and modern PBKDF2 authentication
-- Graceful connection handling and error recovery
-
 ## Requirements
 
 - PHP 8.2 or higher
@@ -32,11 +13,20 @@ PHP was chosen simply because it's a language I'm comfortable with. While there 
 
 Note: This is a command-line script - no web server is required.
 
+## Features
+
+- Real-time log forwarding from FRITZ!Box to syslog server
+- Supports RFC 3164 syslog format
+- Configurable refresh interval and retry mechanism
+- Secure authentication with FRITZ!Box web interface
+- Support for both legacy MD5 and modern PBKDF2 authentication
+- Graceful connection handling and error recovery
+
 ## Installation
 
 1. Clone this repository or download the script
 2. Ensure PHP is installed and available in your PATH
-3. Make the script executable (Unix systems):
+3. Make the script executable:
    ```bash
    chmod +x syslog-forwarder.php
    ```
@@ -61,6 +51,12 @@ The script will:
 4. Forward logs to your syslog server
 
 To stop the script, press Ctrl+C.
+
+### Running as a Docker Container
+
+```bash
+docker compose up -d
+```
 
 ### Running as a Service
 
@@ -95,18 +91,6 @@ sudo systemctl start syslog-forwarder
 sudo systemctl status syslog-forwarder
 ```
 
-### Running as container
-
-Build the container:
-```
-docker build -t syslog-forwarder .
-```
-
-Run the container using docker:
-```
-docker run -d --env-file .env syslog-forwarder
-```
-
 ## Syslog Message Format
 
 Messages are sent in RFC 3164 format:
@@ -119,6 +103,16 @@ Messages are sent in RFC 3164 format:
 - Network errors will be retried with exponential backoff
 - Invalid sessions are automatically renewed
 - All errors are logged with timestamps
+
+## Background
+
+This project was created to address the lack of native syslog forwarding capabilities in FRITZ!Box routers. It allows centralizing router event logs to a syslog server for better log management and monitoring.
+
+This tool started as a personal utility and was developed in just a few hours. It's being shared for others who might need a simple solution to the same problem.
+
+### Why PHP?
+
+PHP was chosen simply because it's a language I'm comfortable with. While there might be better technical choices for this task, PHP is simple enough to get the job done. The performance impact of using PHP with polling is negligible - even with 1-second refresh intervals, the resource usage remains minimal.
 
 ## Contributing
 
