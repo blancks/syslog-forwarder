@@ -117,9 +117,13 @@ PHP was chosen simply because it's a language I'm comfortable with. While there 
 ## Contributing
 
 Feel free to:
-- Open issues if you need help
 - Request new features
+- Open issues if you need help
 - Submit pull requests to improve the project
+
+> **Note:** Please base your pull request on the `dev` branch. Pull requests to `main` may be closed or asked to rebase.
+
+> **Tip:** Before starting to work on a new feature or fix, check the list of [opened issues](https://github.com/blancks/syslog-forwarder/issues). They are a good starting point for contributing and may help you avoid duplicated work.
 
 All contributions are welcome! This project aims to be a simple solution, but that doesn't mean it can't be improved.
 
