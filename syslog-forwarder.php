@@ -853,16 +853,32 @@ function makeEventLogsRequest(
     string $endpoint,
     string $sessionId
 ): array {
-    $eventLogsEndpoint = $endpoint .'/api/v0/eventlog';
+    static $workingEndpoint = null;
 
-    $response = makeRequest(
-        url: $eventLogsEndpoint,
-        method: 'GET',
-        headers: [
-            'AUTHORIZATION: AVM-SID '. $sessionId,
-            'Content-Type: application/json',
-        ]
-    );
+    $eventLogsEndpointList = [
+        $endpoint .'/api/v0/dino/eventlog',
+        $endpoint .'/api/v0/eventlog',
+    ];
+
+    foreach ($eventLogsEndpointList as $eventLogsEndpoint) {
+        if ($workingEndpoint !== null && $workingEndpoint !== $eventLogsEndpoint) {
+            continue;
+        }
+
+        $response = makeRequest(
+            url: $eventLogsEndpoint,
+            method: 'GET',
+            headers: [
+                'AUTHORIZATION: AVM-SID '. $sessionId,
+                'Content-Type: application/json',
+            ]
+        );
+
+        if ($response['status'] === 200) {
+            $workingEndpoint = $eventLogsEndpoint;
+            break;
+        }
+    }
 
     // don't know why they chose 400 code instead of 401
     if ($response['status'] === 400) {
