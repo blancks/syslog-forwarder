@@ -8,7 +8,7 @@ A PHP script that forwards FRITZ!Box system logs to a syslog server.
 - CURL extension
 - Access to a FRITZ!Box device
   - Tested with FRITZ!Box 7530, 7590
-  - Tested with FRITZ!OS v.8.02, v.8.03
+  - Tested with FRITZ!OS v.8.02, v.8.03, v.8.20
 - A syslog server (like rsyslog, syslog-ng)
 
 Note: This is a command-line script - no web server is required.
